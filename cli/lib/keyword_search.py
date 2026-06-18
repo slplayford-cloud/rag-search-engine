@@ -2,17 +2,14 @@
 
 import string
 
-from .search_utils import DEFAULT_SEARCH_LIMIT, load_movies
+from .search_utils import DEFAULT_SEARCH_LIMIT, STOPWORDS_PATH, load_movies
 
-DEFAULT_TOKEN_LIMIT = 1
 
-def search_command(
-        query: str, limit: int = DEFAULT_SEARCH_LIMIT 
-) -> list[dict]:
+def search_command(query: str, limit: int = DEFAULT_SEARCH_LIMIT) -> list[dict]:
 
     movies = load_movies()
-    results = []
 
+    results = []
     for movie in movies:
         query_tokens = tokenize_text(query)
         title_tokens = tokenize_text(movie["title"])
@@ -31,13 +28,30 @@ def preprocess_text(text: str) -> str:
 
     return text
 
+
+def load_stop_words() -> set:
+    result = set()
+
+    with open(STOPWORDS_PATH, "r") as f:
+        text = f.read()
+        text = text.splitlines()
+
+        result = set(map(preprocess_text, text))
+
+    return result
+
+
+STOPWORDS = load_stop_words()
+
+
 def tokenize_text(text: str) -> list[str]:
     text = preprocess_text(text)
 
     words = text.split()
-    words = list(filter(lambda s: s != "", words))
+    words = list(filter(lambda s: s not in STOPWORDS, words))
 
     return words
+
 
 def has_matching_token(query: list[str], title: list[str]) -> bool:
     for query_token in query:
