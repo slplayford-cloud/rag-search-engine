@@ -1,6 +1,17 @@
 #!/usr/bin/env python3
 
 import argparse
+import json
+
+from lib.keyword_search import search_command
+
+# Load the file from the param. into a dict
+def load_json(file_path: str):
+    with open(file_path, "r") as fp:
+        data = json.load(fp)
+
+    return data
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Keyword Search CLI")
@@ -14,8 +25,13 @@ def main() -> None:
     match args.command:
         case "search":
             print(f"Searching for: {args.query}")
+            matches = search_command(args.query)
+            for i, movie in enumerate(matches[:5]):
+                print(f"{i+1}. {movie['title']}")
         case _:
             parser.print_help()
+
+
 
 if __name__ == "__main__":
     main()
