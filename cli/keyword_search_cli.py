@@ -4,6 +4,7 @@ import argparse
 import json
 
 from lib.keyword_search import search_command
+from lib.inverted_index import build_command
 
 # Load the file from the param. into a dict
 def load_json(file_path: str):
@@ -20,6 +21,8 @@ def main() -> None:
     search_parser = subparsers.add_parser("search", help="Search movies using keywords")
     search_parser.add_argument("query", type=str, help="Search query")
 
+    subparsers.add_parser("build", help="Build the inverted index and save it to disk")
+
     args = parser.parse_args()
 
     match args.command:
@@ -28,6 +31,8 @@ def main() -> None:
             matches = search_command(args.query)
             for i, movie in enumerate(matches[:5]):
                 print(f"{i+1}. {movie['title']}")
+        case "build":
+            build_command()
         case _:
             parser.print_help()
 

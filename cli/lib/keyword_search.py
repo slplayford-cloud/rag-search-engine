@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import string
+from nltk.stem import PorterStemmer
 
 from .search_utils import DEFAULT_SEARCH_LIMIT, STOPWORDS_PATH, load_movies
 
@@ -49,6 +50,9 @@ def tokenize_text(text: str) -> list[str]:
 
     words = text.split()
     words = list(filter(lambda s: s not in STOPWORDS, words))
+
+    stemmer = PorterStemmer()
+    words = list(map(stemmer.stem, words))
 
     return words
 
