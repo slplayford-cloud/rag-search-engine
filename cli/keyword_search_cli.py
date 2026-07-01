@@ -3,8 +3,7 @@
 import argparse
 import json
 
-from lib.keyword_search import search_command
-from lib.inverted_index import build_command
+from lib.keyword_search import search_command, build_command, term_frequency
 
 # Load the file from the param. into a dict
 def load_json(file_path: str):
@@ -23,6 +22,11 @@ def main() -> None:
 
     subparsers.add_parser("build", help="Build the inverted index and save it to disk")
 
+    tf_parser = subparsers.add_parser("tf", help="Get the frequency of a token in a given doc_id")
+    tf_parser.add_argument("doc_id", type=int, help="doc_id of the search document")
+    tf_parser.add_argument("token", type=str, help="The token count to look up")
+    
+
     args = parser.parse_args()
 
     match args.command:
@@ -33,6 +37,10 @@ def main() -> None:
                 print(f"{i+1}. {movie['title']}")
         case "build":
             build_command()
+        case "tf":
+            print(f"Looking for \'{args.token}\' in document ({args.doc_id})")
+            fq = term_frequency(args.doc_id, args.token)
+            print(f"Found \'{args.token}\' in document ({args.doc_id}) {fq} times")
         case _:
             parser.print_help()
 
