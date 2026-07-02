@@ -3,7 +3,7 @@
 import argparse
 import json
 
-from lib.keyword_search import search_command, build_command, term_frequency
+from lib.keyword_search import search_command, build_command, term_frequency, inverse_frequency
 
 # Load the file from the param. into a dict
 def load_json(file_path: str):
@@ -24,7 +24,10 @@ def main() -> None:
 
     tf_parser = subparsers.add_parser("tf", help="Get the frequency of a token in a given doc_id")
     tf_parser.add_argument("doc_id", type=int, help="doc_id of the search document")
-    tf_parser.add_argument("token", type=str, help="The token count to look up")
+    tf_parser.add_argument("term", type=str, help="The token count to look up")
+
+    idf_parser = subparsers.add_parser("idf", help="Get the inverse frequency for a token")
+    idf_parser.add_argument("term", type=str, help="Token to look up")
     
 
     args = parser.parse_args()
@@ -38,9 +41,13 @@ def main() -> None:
         case "build":
             build_command()
         case "tf":
-            print(f"Looking for \'{args.token}\' in document ({args.doc_id})")
-            fq = term_frequency(args.doc_id, args.token)
-            print(f"Found \'{args.token}\' in document ({args.doc_id}) {fq} times")
+            print(f"Looking for \'{args.term}\' in document ({args.doc_id})")
+            fq = term_frequency(args.doc_id, args.term)
+            print(f"Found \'{args.term}\' in document ({args.doc_id}) {fq} times")
+        case "idf":
+            print(f"Looking for inverse frequency of \'{args.term}\'")
+            idf = inverse_frequency(args.term)
+            print(f"Inverse document frequency of '{args.term}': {idf:.2f}")
         case _:
             parser.print_help()
 

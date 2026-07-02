@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import math
 import os
 import pickle
 import string
@@ -13,8 +14,8 @@ from .search_utils import (DEFAULT_SEARCH_LIMIT, STOPWORDS_PATH, Movie,
 
 class InvertedIndex:
     def __init__(self):
-        self.index: dict[str, list[int]] = defaultdict(
-            list
+        self.index: dict[str, set[int]] = defaultdict(
+            set
         )  # this translates token to doc_id list
         self.docmap: dict[int, Movie] = {}  # doc_id to movie object
 
@@ -25,7 +26,7 @@ class InvertedIndex:
         self._update_frequency(doc_id, tokens)
 
         for token in tokens:
-            self.index[token].append(doc_id)
+            self.index[token].add(doc_id)
 
     def _update_frequency(self, doc_id: int, tokens: list[str]):
         self.term_frequencies[doc_id] = Counter(tokens)
@@ -45,6 +46,9 @@ class InvertedIndex:
         except:
             return 0
 
+    def get_idf(self, term: str):
+        return math.log((len(self.docmap) + 1) / (len(self.index[term]) + 1))
+        
     def build(self):
         movies = load_movies()
         for m in movies:
@@ -94,6 +98,7 @@ def search_command(query: str, limit: int = DEFAULT_SEARCH_LIMIT) -> list[dict]:
 
     return results
 
+
 def term_frequency(doc_id: int, term: str) -> int:
     iv_index = InvertedIndex()
     try:
@@ -104,6 +109,18 @@ def term_frequency(doc_id: int, term: str) -> int:
 
     tk = single_token(term)
     return iv_index.get_tf(doc_id, tk)
+
+
+def inverse_frequency(term: str) -> float:
+    iv_index = InvertedIndex()
+    try:
+        iv_index.load()
+    except:
+        print("Could not laod movies index from disk")
+        exit()
+
+    tk = single_token(term)
+    return iv_index.get_idf(tk)
 
 
 def preprocess_text(text: str) -> str:
