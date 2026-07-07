@@ -3,7 +3,7 @@
 import argparse
 import json
 
-from lib.keyword_search import search_command, build_command, term_frequency, inverse_frequency
+from lib.keyword_search import search_command, build_command, term_frequency, inverse_frequency, get_tf_idf
 
 # Load the file from the param. into a dict
 def load_json(file_path: str):
@@ -28,6 +28,10 @@ def main() -> None:
 
     idf_parser = subparsers.add_parser("idf", help="Get the inverse frequency for a token")
     idf_parser.add_argument("term", type=str, help="Token to look up")
+
+    tf_idf_parser = subparsers.add_parser("tfidf", help="Get TF-IDF score for token")
+    tf_idf_parser.add_argument("doc_id", type=int, help="doc_id of the search document")
+    tf_idf_parser.add_argument("term", type=str, help="The token count to look up")
     
 
     args = parser.parse_args()
@@ -48,6 +52,10 @@ def main() -> None:
             print(f"Looking for inverse frequency of \'{args.term}\'")
             idf = inverse_frequency(args.term)
             print(f"Inverse document frequency of '{args.term}': {idf:.2f}")
+        case "tfidf":
+            print(f"Looking for TF-IDF score of \'{args.term}\'")
+            tf_idf = get_tf_idf(args.doc_id, args.term)
+            print(f"TF-IDF score of '{args.term}' in document '{args.doc_id}': {tf_idf:.2f}")
         case _:
             parser.print_help()
 

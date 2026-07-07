@@ -48,6 +48,9 @@ class InvertedIndex:
 
     def get_idf(self, term: str):
         return math.log((len(self.docmap) + 1) / (len(self.index[term]) + 1))
+
+    def get_tfidf(self, doc_id: int, token: str):
+        return self.get_tf(doc_id, token) * self.get_idf(token)
         
     def build(self):
         movies = load_movies()
@@ -121,6 +124,17 @@ def inverse_frequency(term: str) -> float:
 
     tk = single_token(term)
     return iv_index.get_idf(tk)
+
+def get_tf_idf(doc_id: int, term: str) -> float:
+    iv_index = InvertedIndex()
+    try:
+        iv_index.load()
+    except:
+        print("Could not laod movies index from disk")
+        exit()
+
+    tk = single_token(term)
+    return iv_index.get_tfidf(doc_id, tk)
 
 
 def preprocess_text(text: str) -> str:
