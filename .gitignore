@@ -9,5 +9,5 @@ wheels/
 # Virtual environments
 .venv
 
-# Data directory
-/data/
+# Built index artifacts (regenerated via `build` command)
+/cache/
