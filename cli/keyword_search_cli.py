@@ -1,19 +1,67 @@
 #!/usr/bin/env python3
 
 import argparse
-import json
 
-from lib.keyword_search import search_command, build_command, term_frequency, inverse_frequency, get_tf_idf
-
-# Load the file from the param. into a dict
-def load_json(file_path: str):
-    with open(file_path, "r") as fp:
-        data = json.load(fp)
-
-    return data
+from lib.inverted_index import IndexNotBuiltError, load_index
+from lib.keyword_search import (bm25_idf_command, bm25_search, bm25_tf_command,
+                                build_command, inverse_frequency_command,
+                                search_command, term_frequency_command,
+                                tf_idf_command)
+from lib.search_utils import BM25_B, BM25_K1
 
 
 def main() -> None:
+    parser = setup_parsers()
+
+    args = parser.parse_args()
+
+    try:
+        match args.command:
+            case "search":
+                print(f"Searching for: {args.query}")
+                matches = search_command(args.query)
+                for i, movie in enumerate(matches[:5]):
+                    print(f"{i+1}. {movie['title']}")
+            case "build":
+                build_command()
+            case "tf":
+                print(f"Looking for '{args.term}' in document ({args.doc_id})")
+                fq = term_frequency_command(args.doc_id, args.term)
+                print(f"Found '{args.term}' in document ({args.doc_id}) {fq} times")
+            case "idf":
+                print(f"Looking for inverse frequency of '{args.term}'")
+                idf = inverse_frequency_command(args.term)
+                print(f"Inverse document frequency of '{args.term}': {idf:.2f}")
+            case "tfidf":
+                print(f"Looking for TF-IDF score of '{args.term}'")
+                tf_idf = tf_idf_command(args.doc_id, args.term)
+                print(
+                    f"TF-IDF score of '{args.term}' in document '{args.doc_id}': {tf_idf:.2f}"
+                )
+            case "bm25idf":
+                print(f"Looking for BM25-IDF score of '{args.term}'")
+                bm25idf = bm25_idf_command(args.term)
+                print(f"BM25 IDF score of '{args.term}': {bm25idf:.2f}")
+            case "bm25tf":
+                print(f"Looking for BM25-TF score of '{args.term}'")
+                bm25tf = bm25_tf_command(args.doc_id, args.term, args.k1)
+                print(
+                    f"BM25 TF score of '{args.term}' in document '{args.doc_id}': {bm25tf:.2f}"
+                )
+            case "bm25search":
+                print(f"Searching for: {args.query}")
+                top_matches = bm25_search(args.query)
+                iv_index = load_index()
+                for i, (doc_id, score) in enumerate(top_matches):
+                    print(f"{i+1}. ({doc_id}) {iv_index.docmap[doc_id]['title']} - Score: {score:.2f}")
+            case _:
+                parser.print_help()
+    except IndexNotBuiltError as e:
+        print(e)
+        exit(1)
+
+
+def setup_parsers() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Keyword Search CLI")
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
@@ -22,43 +70,44 @@ def main() -> None:
 
     subparsers.add_parser("build", help="Build the inverted index and save it to disk")
 
-    tf_parser = subparsers.add_parser("tf", help="Get the frequency of a token in a given doc_id")
+    tf_parser = subparsers.add_parser(
+        "tf", help="Get the frequency of a token in a given doc_id"
+    )
     tf_parser.add_argument("doc_id", type=int, help="doc_id of the search document")
     tf_parser.add_argument("term", type=str, help="The token count to look up")
 
-    idf_parser = subparsers.add_parser("idf", help="Get the inverse frequency for a token")
+    idf_parser = subparsers.add_parser(
+        "idf", help="Get the inverse frequency for a token"
+    )
     idf_parser.add_argument("term", type=str, help="Token to look up")
 
     tf_idf_parser = subparsers.add_parser("tfidf", help="Get TF-IDF score for token")
     tf_idf_parser.add_argument("doc_id", type=int, help="doc_id of the search document")
     tf_idf_parser.add_argument("term", type=str, help="The token count to look up")
-    
 
-    args = parser.parse_args()
+    bm25_idf_parser = subparsers.add_parser(
+        "bm25idf", help="Get BM25 IDF score for a given term"
+    )
+    bm25_idf_parser.add_argument(
+        "term", type=str, help="Term to get BM25 IDF score for"
+    )
 
-    match args.command:
-        case "search":
-            print(f"Searching for: {args.query}")
-            matches = search_command(args.query)
-            for i, movie in enumerate(matches[:5]):
-                print(f"{i+1}. {movie['title']}")
-        case "build":
-            build_command()
-        case "tf":
-            print(f"Looking for \'{args.term}\' in document ({args.doc_id})")
-            fq = term_frequency(args.doc_id, args.term)
-            print(f"Found \'{args.term}\' in document ({args.doc_id}) {fq} times")
-        case "idf":
-            print(f"Looking for inverse frequency of \'{args.term}\'")
-            idf = inverse_frequency(args.term)
-            print(f"Inverse document frequency of '{args.term}': {idf:.2f}")
-        case "tfidf":
-            print(f"Looking for TF-IDF score of \'{args.term}\'")
-            tf_idf = get_tf_idf(args.doc_id, args.term)
-            print(f"TF-IDF score of '{args.term}' in document '{args.doc_id}': {tf_idf:.2f}")
-        case _:
-            parser.print_help()
+    bm25_tf_parser = subparsers.add_parser(
+        "bm25tf", help="Get BM25 TF score for a given document ID and term"
+    )
+    bm25_tf_parser.add_argument("doc_id", type=int, help="Document ID")
+    bm25_tf_parser.add_argument("term", type=str, help="Term to get BM25 TF score for")
+    bm25_tf_parser.add_argument(
+        "k1", type=float, nargs="?", default=BM25_K1, help="Tunable BM25 K1 parameter"
+    )
+    bm25_tf_parser.add_argument(
+        "b", type=float, nargs="?", default=BM25_B, help="Tunable BM25 b parameter"
+    )
 
+    bm25search_parser = subparsers.add_parser("bm25search", help="Search movies using full BM25 scoring")
+    bm25search_parser.add_argument("query", type=str, help="Search query")
+
+    return parser
 
 
 if __name__ == "__main__":
